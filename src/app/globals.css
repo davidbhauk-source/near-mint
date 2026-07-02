@@ -1952,3 +1952,160 @@ body {
   margin-right: 20px;
   animation: skeleton-pulse 1.5s ease-in-out infinite;
 }
+
+/* Settings panel */
+.settings-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: flex-end;
+  z-index: 100;
+}
+
+.settings-panel {
+  width: 380px;
+  max-width: 92%;
+  background: #111c11;
+  height: 100%;
+  overflow-y: auto;
+  border-left: 0.5px solid rgba(45, 90, 39, 0.4);
+  padding: 24px 20px;
+  box-sizing: border-box;
+}
+
+.settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.settings-title {
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--nm-cream);
+  margin: 0;
+}
+
+.settings-close {
+  background: none;
+  border: none;
+  color: rgba(245, 242, 235, 0.4);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.settings-sec {
+  margin-bottom: 24px;
+}
+
+.settings-sec-label {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: rgba(245, 242, 235, 0.3);
+  margin-bottom: 12px;
+}
+
+.settings-divider {
+  border: none;
+  border-top: 0.5px solid rgba(45, 90, 39, 0.3);
+  margin: 0 0 24px;
+}
+
+.settings-expand-btn {
+  font-size: 13px;
+  color: rgba(245, 242, 235, 0.6);
+  background: transparent;
+  border: 0.5px solid rgba(45, 90, 39, 0.4);
+  border-radius: 6px;
+  padding: 7px 14px;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  display: flex;
+  justify-content: space-between;
+}
+
+.settings-sub-panel {
+  background: rgba(255, 255, 255, 0.02);
+  border: 0.5px solid rgba(45, 90, 39, 0.3);
+  border-radius: 8px;
+  padding: 14px;
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.settings-signout-btn {
+  font-size: 13px;
+  color: rgba(245, 242, 235, 0.6);
+  background: transparent;
+  border: 0.5px solid rgba(45, 90, 39, 0.4);
+  border-radius: 6px;
+  padding: 8px 16px;
+  cursor: pointer;
+  width: 100%;
+}
+
+.settings-danger-btn {
+  font-size: 13px;
+  color: #e88e7d;
+  background: rgba(232, 142, 125, 0.08);
+  border: 0.5px solid rgba(232, 142, 125, 0.3);
+  border-radius: 6px;
+  padding: 7px 14px;
+  cursor: pointer;
+}
+
+/* Favourite run slots in settings */
+.fav-edit-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.fav-slot {
+  aspect-ratio: 2/3;
+  border-radius: 6px;
+  border: 1px dashed rgba(45, 90, 39, 0.5);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: rgba(245, 242, 235, 0.25);
+  font-size: 11px;
+  gap: 6px;
+  position: relative;
+  overflow: hidden;
+}
+
+.fav-slot.filled {
+  border-style: solid;
+  border-color: rgba(45, 90, 39, 0.3);
+  cursor: default;
+}
+
+.fav-slot-remove {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: rgba(17, 28, 17, 0.85);
+  color: #e88e7d;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  cursor: pointer;
+  border: none;
+  z-index: 2;
+}

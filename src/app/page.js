@@ -5,7 +5,7 @@ export const revalidate = 3600 // recheck every hour
 
 export const metadata = {
   title: "Near Mint — Track comic book runs",
-  description: "Log, rate, and review comic book runs — not just issues.",
+  description: "Log, rate, and review comic book runs",
 }
 
 // Category definitions — add new rows here later by just adding to this array
@@ -89,8 +89,8 @@ const allTimeLogCounts = {};
       {/* Hero */}
       <div className="nm-hero">
         <div className="nm-eyebrow">Near Mint</div>
-        <h1 className="nm-h1">Track the runs that shaped you.</h1>
-        <p className="nm-hero-sub">Log, rate, and review comic book runs — not just issues.</p>
+        <h1 className="nm-h1">Track the runs that shape you.</h1>
+        <p className="nm-hero-sub">Log, rate, and review comic book runs</p>
       </div>
 
 

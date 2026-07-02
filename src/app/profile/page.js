@@ -24,21 +24,20 @@ export async function generateMetadata() {
 export default async function ProfilePage() {
   const supabase = await createServerSupabase();
 
-  // Get the real logged in user
   const { data: { user } } = await supabase.auth.getUser();
 
-  // If not signed in, send to auth page
-  if (!user) {
-    redirect("/auth");
-  }
+  if (!user) redirect("/auth");
 
   const userId = user.id;
+  const email = user.email;
 
   const { data: profile } = await supabase
     .from("profiles")
     .select("*")
     .eq("id", userId)
     .single();
+
+  if (!profile) redirect("/auth");
 
   const { data: logs } = await supabase
     .from("readlogs")
@@ -107,7 +106,7 @@ export default async function ProfilePage() {
 
   return (
     <ProfileClient
-      profile={profile}
+      profile={{ ...profile, email, favourite_run_data: favouriteRuns }}
       logs={safeLogs}
       reviews={safeReviews}
       favouriteRuns={favouriteRuns}

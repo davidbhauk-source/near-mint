@@ -1,6 +1,7 @@
 'use client'
 import { useState } from "react";
 import Link from "next/link";
+import SettingsPanel from "@/components/settings-panel";
 
 export default function ProfileClient({
   profile,
@@ -12,6 +13,7 @@ export default function ProfileClient({
   readingCount,
 }) {
   const [activeTab, setActiveTab] = useState("stats");
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const username = profile?.username ?? "Anonymous";
   const bio = profile?.bio ?? "No bio yet.";
@@ -53,17 +55,19 @@ export default function ProfileClient({
             </div>
           </div>
         </div>
-        <button className="profile-edit">Edit profile</button>
+        <button className="profile-edit" onClick={() => setSettingsOpen(true)} type="button">
+          ⚙ Settings
+        </button>
       </div>
 
       {/* Favourite runs */}
       <div className="fav-section">
         <div className="fav-header">
           <span className="fav-label">Favourite runs</span>
-          <button className="fav-edit">Edit →</button>
+          <button className="fav-edit" onClick={() => setSettingsOpen(true)} type="button">Edit →</button>
         </div>
         {favouriteRuns.length === 0 ? (
-          <p className="profile-empty">No favourite runs set yet — edit your profile to add some.</p>
+          <p className="profile-empty">No favourite runs set yet — open settings to add some.</p>
         ) : (
           <div className="fav-grid">
             {favouriteRuns.map((run) => (
@@ -244,6 +248,14 @@ export default function ProfileClient({
             </div>
           )}
         </div>
+      )}
+
+      {/* Settings panel */}
+      {settingsOpen && (
+        <SettingsPanel
+          profile={profile}
+          onClose={() => setSettingsOpen(false)}
+        />
       )}
 
     </div>

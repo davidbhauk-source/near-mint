@@ -11,6 +11,8 @@ export default function ProfileClient({
   recentLogs,
   stats,
   readingCount,
+  followerCount,
+  followingCount, 
 }) {
   const [activeTab, setActiveTab] = useState("stats");
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -53,6 +55,16 @@ export default function ProfileClient({
               <span>{readingCount}</span>
               <small>reading</small>
             </div>
+              <div className="profile-count">
+         <Link href="/friends" style={{ textDecoration: "none" }}>
+          <span>{followerCount}</span><small>followers</small>
+        </Link>
+      </div>
+      <div className="profile-count">
+        <Link href="/friends" style={{ textDecoration: "none" }}>
+          <span>{followingCount}</span><small>following</small>
+        </Link>
+          </div>
           </div>
         </div>
         <button className="profile-edit" onClick={() => setSettingsOpen(true)} type="button">

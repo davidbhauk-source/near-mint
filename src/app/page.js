@@ -1,14 +1,13 @@
 import Link from "next/link";
 import { createServerSupabase } from "@/lib/supabase-server";
 
-export const revalidate = 3600 // recheck every hour
+export const revalidate = 3600
 
 export const metadata = {
   title: "Near Mint — Track comic book runs",
   description: "Log, rate, and review comic book runs",
 }
 
-// Category definitions — add new rows here later by just adding to this array
 const CATEGORIES = [
   {
     slug: "ongoing",
@@ -33,69 +32,87 @@ const CATEGORIES = [
 export default async function HomePage() {
   const supabase = await createServerSupabase();
 
-  // Fetch all runs
   const { data: runs } = await supabase
     .from("runs")
     .select("*")
     .order("title")
     .range(0, 2000);
 
-      
-
   const allRuns = runs ?? [];
- 
 
-  // Fetch most logged this week
   const oneWeekAgo = new Date();
   oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
 
   const { data: recentLogs } = await supabase
-    .from("readlogs") // change to your actual table name if different
+    .from("readlogs")
     .select("run_id")
     .gte("created_at", oneWeekAgo.toISOString());
 
-  // Count how many times each run was logged this week
   const logCounts = {};
   (recentLogs ?? []).forEach(({ run_id }) => {
     logCounts[run_id] = (logCounts[run_id] ?? 0) + 1;
   });
 
-  // All-time log counts for sorting categories that aren't "popular this week"
-const { data: allLogs } = await supabase
-  .from("readlogs")
-  .select("run_id");
+  const { data: allLogs } = await supabase
+    .from("readlogs")
+    .select("run_id");
 
-const allTimeLogCounts = {};
-(allLogs ?? []).forEach(({ run_id }) => {
-  allTimeLogCounts[run_id] = (allTimeLogCounts[run_id] ?? 0) + 1;
-});
-  
+  const allTimeLogCounts = {};
+  (allLogs ?? []).forEach(({ run_id }) => {
+    allTimeLogCounts[run_id] = (allTimeLogCounts[run_id] ?? 0) + 1;
+  });
 
-  // Sort runs by log count, take top 12
+  // Friends activity
+  const { data: { user } } = await supabase.auth.getUser();
+  let friendsRuns = [];
+
+  if (user) {
+    const { data: follows } = await supabase
+      .from("follows")
+      .select("following_id")
+      .eq("follower_id", user.id);
+
+    const followingIds = (follows ?? []).map((f) => f.following_id);
+
+    if (followingIds.length > 0) {
+      const { data: friendLogs } = await supabase
+        .from("readlogs")
+        .select("run_id, runs(*)")
+        .in("user_id", followingIds)
+        .order("created_at", { ascending: false })
+        .limit(12);
+
+      const seen = new Set();
+      friendsRuns = (friendLogs ?? [])
+        .filter((log) => {
+          if (seen.has(log.run_id)) return false;
+          seen.add(log.run_id);
+          return true;
+        })
+        .map((log) => log.runs)
+        .filter(Boolean)
+        .slice(0, 6);
+    }
+  }
+
   const popularThisWeek = [...allRuns]
     .filter((run) => logCounts[run.id])
     .sort((a, b) => (logCounts[b.id] ?? 0) - (logCounts[a.id] ?? 0))
     .slice(0, 12);
 
-  // Fall back to most recent runs if nobody has logged anything yet
   const popularRow = popularThisWeek.length >= 3
     ? popularThisWeek
     : [...allRuns].slice(0, 12);
 
-
   return (
     <div className="nm-page-body">
 
-      {/* Hero */}
       <div className="nm-hero">
         <div className="nm-eyebrow">Near Mint</div>
         <h1 className="nm-h1">Track the runs that shape you.</h1>
         <p className="nm-hero-sub">Log, rate, and review comic book runs</p>
       </div>
 
-
-
-      {/* Popular this week row */}
       <RunRow
         label="Popular this week"
         description="Most logged in the last 7 days"
@@ -103,40 +120,51 @@ const allTimeLogCounts = {};
         runs={popularRow.slice(0, 6)}
       />
 
-   {/* Category rows */}
-{CATEGORIES.map((cat) => {
-  const filtered = allRuns
-    .filter(cat.filter)
-    .sort((a, b) => (allTimeLogCounts[b.id] ?? 0) - (allTimeLogCounts[a.id] ?? 0))
-    .slice(0, 6);
-  if (filtered.length === 0) return null;
-  return (
-    <RunRow
-      key={cat.slug}
-      label={cat.label}
-      description={cat.description}
-      slug={cat.slug}
-      runs={filtered}
-    />
-  );
-})}
+      {CATEGORIES.map((cat) => {
+        const filtered = allRuns
+          .filter(cat.filter)
+          .sort((a, b) => (allTimeLogCounts[b.id] ?? 0) - (allTimeLogCounts[a.id] ?? 0))
+          .slice(0, 6);
+        if (filtered.length === 0) return null;
+        return (
+          <RunRow
+            key={cat.slug}
+            label={cat.label}
+            description={cat.description}
+            slug={cat.slug}
+            runs={filtered}
+          />
+        );
+      })}
 
-      {/* Friends row — post-MVP placeholder */}
-      <div className="nm-section nm-section-muted">
+      {/* Friends row */}
+      <div className="nm-section" style={{ opacity: friendsRuns.length === 0 ? 0.4 : 1 }}>
         <div className="nm-section-header">
           <div>
             <span className="nm-section-label">From your friends</span>
-            <span className="nm-section-desc">Coming soon</span>
+            <span className="nm-section-desc">
+              {friendsRuns.length === 0 ? "Follow people to see their activity" : "Recently logged by people you follow"}
+            </span>
           </div>
+          <Link href="/friends" className="nm-see-all">
+            {friendsRuns.length === 0 ? "Find friends →" : "See all →"}
+          </Link>
         </div>
-        <div className="nm-coming-soon">
-          Add friends to see what they're reading
-        </div>
+        {friendsRuns.length === 0 ? (
+          <div className="nm-coming-soon">
+            Follow people to see what they're reading here.
+          </div>
+        ) : (
+          <div className="nm-run-grid">
+            {friendsRuns.map((run) => (
+              <RunCard key={run.id} run={run} />
+            ))}
+          </div>
+        )}
       </div>
 
     </div>
   );
-
 }
 
 function RunRow({ label, description, slug, runs }) {
@@ -183,4 +211,3 @@ function RunCard({ run }) {
     </Link>
   );
 }
-

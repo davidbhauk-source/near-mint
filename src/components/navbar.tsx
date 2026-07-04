@@ -29,7 +29,7 @@ export default function Navbar() {
 
       <nav className="nav-links">
         <Link href="/search" className={`nav-link ${pathname.startsWith('/search') ? 'active' : ''}`}>
-          🔍 Search
+          Search
         </Link>
         {user && (
           <Link href="/suggest" className={`nav-link ${pathname.startsWith('/suggest') ? 'active' : ''}`}>
@@ -40,6 +40,11 @@ export default function Navbar() {
 
       <div className="nav-right">
         <Link href="/search" className="btn-log">+ Log run</Link>
+        {user && (
+          <Link href="/friends" className={`nav-link ${pathname.startsWith('/friends') ? 'active' : ''}`}>
+          Friends
+          </Link>
+        )}
         {user ? (
           <Link href="/profile" className="avatar">{initial}</Link>
         ) : (

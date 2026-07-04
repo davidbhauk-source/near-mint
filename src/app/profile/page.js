@@ -19,6 +19,17 @@ export async function generateMetadata() {
   return {
     title: profile?.username ? `${profile.username} — Near Mint` : "Profile — Near Mint",
   };
+
+  const { count: followerCount } = await supabase
+  .from("follows")
+  .select("*", { count: "exact", head: true })
+  .eq("following_id", userId);
+
+  const { count: followingCount } = await supabase
+  .from("follows")
+  .select("*", { count: "exact", head: true })
+  .eq("follower_id", userId);
+
 }
 
 export default async function ProfilePage() {
@@ -94,6 +105,16 @@ export default async function ProfilePage() {
   });
   const topArtist = Object.entries(artistCounts).sort((a, b) => b[1] - a[1])[0];
 
+  const { count: followerCount } = await supabase
+    .from("follows")
+    .select("*", { count: "exact", head: true })
+    .eq("following_id", userId);
+
+  const { count: followingCount } = await supabase
+    .from("follows")
+    .select("*", { count: "exact", head: true })
+    .eq("follower_id", userId);
+
   const stats = {
     logCount,
     totalIssuesRead,
@@ -113,6 +134,8 @@ export default async function ProfilePage() {
       recentLogs={safeLogs.slice(0, 8)}
       stats={stats}
       readingCount={readingCount}
+       followerCount={followerCount ?? 0}
+       followingCount={followingCount ?? 0}
     />
   );
 }

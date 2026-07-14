@@ -41,6 +41,13 @@ export default function AuthClient() {
           bio: "",
           favourite_runs: [],
         });
+
+          // If session exists (email confirmation off), sign them in immediately
+      if (data.session) {
+        router.push("/");
+        router.refresh();
+        return;
+        }
       }
 
       setSuccess("Account created! Check your email to confirm, then sign in.");

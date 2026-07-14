@@ -40,7 +40,10 @@ export default function ProfileClient({
       <div className="profile-header">
         <div className="profile-avatar">{initial}</div>
         <div className="profile-info">
-          <h1 className="profile-username">{username}</h1>
+          <h1 className="profile-username">{profile?.display_name || username}</h1>
+           {profile?.display_name && (
+             <p style={{ fontSize: 13, color: "rgba(245,242,235,0.35)", margin: "0 0 8px" }}>@{username}</p>
+           )}
           <p className="profile-bio">{bio}</p>
           <div className="profile-counts">
             <div className="profile-count">

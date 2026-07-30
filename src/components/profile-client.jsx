@@ -13,6 +13,7 @@ export default function ProfileClient({
   readingCount,
   followerCount,
   followingCount, 
+  bookmarkedRuns,
 }) {
   const [activeTab, setActiveTab] = useState("stats");
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -133,14 +134,15 @@ export default function ProfileClient({
 
       {/* Tabs */}
       <div className="tabs">
-        {["stats", "reviews", "logs"].map((tab) => (
+        {["stats", "reviews", "logs", "wanttoread"].map((tab) => (
           <button
             key={tab}
             className={`tab ${activeTab === tab ? "on" : ""}`}
             onClick={() => setActiveTab(tab)}
             type="button"
           >
-            {tab === "stats" ? "Stats" : tab === "reviews" ? "Reviews" : "All logged runs"}
+            {tab === "stats" ? "Stats" : tab === "reviews" ? "Reviews" : tab === "logs" ? "All logged runs"
+            : "WantToRead"}
           </button>
         ))}
       </div>
@@ -264,6 +266,30 @@ export default function ProfileClient({
           )}
         </div>
       )}
+
+      {activeTab === "Readlist" && (
+  <div>
+    {bookmarkedRuns.length === 0 ? (
+      <p className="profile-empty">No bookmarks yet — bookmark runs from their detail page.</p>
+    ) : (
+      <div className="logs-grid">
+        {bookmarkedRuns.map((run) => (
+          <Link key={run.id} href={`/runs/${run.id}`} className="log-card">
+            {run.cover_url ? (
+              <img src={run.cover_url} alt={run.title} className="log-cover" style={{ objectFit: "cover" }} />
+            ) : (
+              <div className="log-cover" style={{ background: "#1a2e1a" }} />
+            )}
+            <div className="log-meta">
+              <div className="log-title">{run.title}</div>
+              <div className="log-status">{run.creative_team?.writers?.join(", ") ?? ""}</div>
+            </div>
+          </Link>
+        ))}
+      </div>
+    )}
+  </div>
+)}
 
       {/* Settings panel */}
       {settingsOpen && (

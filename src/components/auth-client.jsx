@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase";
 
 export default function AuthClient() {
   const router = useRouter();
-  const [mode, setMode] = useState("signin"); // "signin" or "signup"
+  const [mode, setMode] = useState("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [username, setUsername] = useState("");
@@ -22,6 +22,12 @@ export default function AuthClient() {
     const supabase = createClient();
 
     if (mode === "signup") {
+      if (username.includes(" ")) {
+        setError("Username cannot contain spaces.");
+        setLoading(false);
+        return;
+      }
+
       const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
@@ -33,7 +39,6 @@ export default function AuthClient() {
         return;
       }
 
-      // Create profile row for new user
       if (data.user) {
         await supabase.from("profiles").insert({
           id: data.user.id,
@@ -42,11 +47,10 @@ export default function AuthClient() {
           favourite_runs: [],
         });
 
-          // If session exists (email confirmation off), sign them in immediately
-      if (data.session) {
-        router.push("/");
-        router.refresh();
-        return;
+        if (data.session) {
+          router.push("/");
+          router.refresh();
+          return;
         }
       }
 
@@ -55,7 +59,6 @@ export default function AuthClient() {
       return;
     }
 
-    // Sign in
     const { error: signInError } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -95,8 +98,11 @@ export default function AuthClient() {
               className="auth-input"
               placeholder="yourname"
               value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              onChange={(e) => setUsername(e.target.value.replace(/\s/g, ""))}
             />
+            <div style={{ fontSize: 11, color: "rgba(245,242,235,0.3)", marginTop: 4 }}>
+              No spaces allowed
+            </div>
           </div>
         )}
 
@@ -112,27 +118,27 @@ export default function AuthClient() {
         </div>
 
         <div className="log-field">
-  <div className="log-label">Password</div>
-  <div className="auth-password-wrap">
-    <input
-      type={showPassword ? "text" : "password"}
-      className="auth-input"
-      placeholder="••••••••"
-      value={password}
-      onChange={(e) => setPassword(e.target.value)}
-      onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
-      style={{ paddingRight: 40 }}
-    />
-    <button
-      type="button"
-      className="auth-eye"
-      onClick={() => setShowPassword((v) => !v)}
-      aria-label={showPassword ? "Hide password" : "Show password"}
-    >
-      {showPassword ? "🙈" : "👁"}
-    </button>
-  </div>
-</div>
+          <div className="log-label">Password</div>
+          <div className="auth-password-wrap">
+            <input
+              type={showPassword ? "text" : "password"}
+              className="auth-input"
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
+              style={{ paddingRight: 40 }}
+            />
+            <button
+              type="button"
+              className="auth-eye"
+              onClick={() => setShowPassword((v) => !v)}
+              aria-label={showPassword ? "Hide password" : "Show password"}
+            >
+              {showPassword ? "🙈" : "👁"}
+            </button>
+          </div>
+        </div>
 
         {error && <p className="log-error">{error}</p>}
         {success && <p className="auth-success">{success}</p>}
@@ -144,11 +150,7 @@ export default function AuthClient() {
           type="button"
           style={{ width: "100%", padding: "10px" }}
         >
-          {loading
-            ? "Loading…"
-            : mode === "signin"
-            ? "Sign in"
-            : "Create account"}
+          {loading ? "Loading…" : mode === "signin" ? "Sign in" : "Create account"}
         </button>
 
         <p className="auth-switch">

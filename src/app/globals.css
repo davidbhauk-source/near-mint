@@ -2154,3 +2154,38 @@ body {
   color: rgba(245, 242, 235, 0.35);
   margin-top: 1px;
 }
+
+.log-section-header {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--nm-cream);
+  margin-bottom: 16px;
+}
+
+.rd-review-expanded {
+  border-top: 0.5px solid rgba(45, 90, 39, 0.2);
+  padding-top: 10px;
+  margin-top: 8px;
+}
+
+.review-like-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: inherit;
+}
+
+.review-profile-link {
+  font-size: 12px;
+  color: rgba(245, 242, 235, 0.4);
+  text-decoration: none;
+}
+
+.review-profile-link:hover {
+  color: var(--nm-accent);
+}

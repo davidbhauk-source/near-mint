@@ -36,6 +36,7 @@ export default async function PublicProfilePage({ params }) {
     .eq("user_id", profile.id)
     .order("created_at", { ascending: false });
 
+
   const favouriteRunIds = profile?.favourite_runs ?? [];
   let favouriteRuns = [];
   if (favouriteRunIds.length > 0) {

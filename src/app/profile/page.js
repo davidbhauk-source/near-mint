@@ -77,6 +77,15 @@ export default async function ProfilePage() {
   const safeLogs = logs ?? [];
   const safeReviews = reviews ?? [];
 
+const { data: bookmarks } = await supabase
+  .from("readlogs")
+  .select("run_id, runs(*)")
+  .eq("user_id", userId)
+  .eq("bookmarked", true)
+  .order("created_at", { ascending: false });
+
+const bookmarkedRuns = (bookmarks ?? []).map(b => b.runs).filter(Boolean);
+
   const totalIssuesRead = safeLogs.reduce((sum, log) => sum + (log.issues_read ?? 0), 0);
   const reviewCount = safeReviews.length;
   const logCount = safeLogs.length;
@@ -136,6 +145,7 @@ export default async function ProfilePage() {
       readingCount={readingCount}
        followerCount={followerCount ?? 0}
        followingCount={followingCount ?? 0}
+       bookmarkedRuns={bookmarkedRuns}
     />
   );
 }

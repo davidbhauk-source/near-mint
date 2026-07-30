@@ -63,37 +63,64 @@ export default async function HomePage() {
   });
 
   // Friends activity
-  const { data: { user } } = await supabase.auth.getUser();
-  let friendsRuns = [];
+const { data: { user } } = await supabase.auth.getUser();
+let friendsRuns = [];
 
-  if (user) {
-    const { data: follows } = await supabase
-      .from("follows")
-      .select("following_id")
-      .eq("follower_id", user.id);
+if (user) {
+  const { data: follows } = await supabase
+    .from("follows")
+    .select("following_id")
+    .eq("follower_id", user.id);
 
-    const followingIds = (follows ?? []).map((f) => f.following_id);
+  const followingIds = (follows ?? []).map((f) => f.following_id);
 
-    if (followingIds.length > 0) {
-      const { data: friendLogs } = await supabase
-        .from("readlogs")
-        .select("run_id, runs(*)")
-        .in("user_id", followingIds)
-        .order("created_at", { ascending: false })
-        .limit(12);
+  if (followingIds.length > 0) {
+    const { data: friendLogs } = await supabase
+      .from("readlogs")
+      .select("run_id, user_id, created_at, runs(*)")
+      .in("user_id", followingIds)
+      .order("created_at", { ascending: false })
+      .limit(100);
 
-      const seen = new Set();
-      friendsRuns = (friendLogs ?? [])
-        .filter((log) => {
-          if (seen.has(log.run_id)) return false;
-          seen.add(log.run_id);
-          return true;
-        })
-        .map((log) => log.runs)
-        .filter(Boolean)
-        .slice(0, 6);
-    }
+    const { data: friendProfiles } = await supabase
+      .from("profiles")
+      .select("id, username, display_name")
+      .in("id", followingIds);
+
+    const profileMap = {};
+    (friendProfiles ?? []).forEach((p) => {
+      profileMap[p.id] = p;
+    });
+
+    const { data: friendReviews } = await supabase
+      .from("reviews")
+      .select("run_id, user_id, rating")
+      .in("user_id", followingIds);
+
+    const ratingMap = {};
+    (friendReviews ?? []).forEach((r) => {
+      ratingMap[`${r.user_id}-${r.run_id}`] = r.rating;
+    });
+
+    // Only take the most recent log per user
+    const latestPerUser = {};
+    (friendLogs ?? []).forEach((log) => {
+      if (!latestPerUser[log.user_id]) {
+        latestPerUser[log.user_id] = log;
+      }
+    });
+
+    friendsRuns = Object.values(latestPerUser)
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+      .map((log) => ({
+        ...log.runs,
+        logged_by: profileMap[log.user_id]?.display_name || profileMap[log.user_id]?.username,
+        logged_by_rating: ratingMap[`${log.user_id}-${log.run_id}`] ?? null,
+      }))
+      .filter((r) => r.id)
+      .slice(0, 6);
   }
+}
 
   const popularThisWeek = [...allRuns]
     .filter((run) => logCounts[run.id])
@@ -189,24 +216,41 @@ function RunRow({ label, description, slug, runs }) {
 }
 
 function RunCard({ run }) {
+  function renderStars(rating) {
+    if (!rating) return null;
+    const outOfFive = rating / 2;
+    const stars = [];
+    for (let i = 1; i <= 5; i++) {
+      if (outOfFive >= i) stars.push("★");
+      else if (outOfFive >= i - 0.5) stars.push("½");
+      else stars.push("☆");
+    }
+    return stars.join("");
+  }
+
   return (
     <Link href={`/runs/${run.id}`} className="nm-run-card">
       {run.cover_url ? (
-        <img
-          src={run.cover_url}
-          alt={run.title}
-          className="nm-run-cover"
-        />
+        <img src={run.cover_url} alt={run.title} className="nm-run-cover" />
       ) : (
-        <div className="nm-run-cover nm-run-cover-placeholder">
-          {run.title}
-        </div>
+        <div className="nm-run-cover nm-run-cover-placeholder">{run.title}</div>
       )}
       <div className="nm-run-meta">
         <div className="nm-run-title">{run.title}</div>
-        <div className="nm-run-writer">
-          {run.creative_team?.writers?.join(", ") ?? ""}
-        </div>
+        {run.logged_by ? (
+          <div className="nm-run-writer" style={{ color: "rgba(151,196,89,0.7)" }}>
+            {run.logged_by}
+            {run.logged_by_rating && (
+              <span style={{ marginLeft: 4, color: "#97c459" }}>
+                · {renderStars(run.logged_by_rating)}
+              </span>
+            )}
+          </div>
+        ) : (
+          <div className="nm-run-writer">
+            {run.creative_team?.writers?.join(", ") ?? ""}
+          </div>
+        )}
       </div>
     </Link>
   );

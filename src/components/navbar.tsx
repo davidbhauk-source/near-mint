@@ -36,6 +36,9 @@ export default function Navbar() {
             Suggest
           </Link>
         )}
+        <Link href="/reviews" className={`nav-link ${pathname.startsWith('/reviews') ? 'active' : ''}`}>
+  Reviews
+</Link>
       </nav>
 
       <div className="nav-right">

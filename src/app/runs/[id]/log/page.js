@@ -5,14 +5,9 @@ import LogReviewForm from "@/components/log-review-form";
 
 export default async function LogPage({ params }) {
   const supabase = await createServerSupabase();
-
-  // Get real logged in user
   const { data: { user } } = await supabase.auth.getUser();
 
-  // Redirect to auth if not signed in
-  if (!user) {
-    redirect("/auth");
-  }
+  if (!user) redirect("/auth");
 
   const resolvedParams = await params;
   const { id } = resolvedParams;
@@ -21,12 +16,9 @@ export default async function LogPage({ params }) {
     .from("runs")
     .select("id, title, cover_url, publisher, issue_count, creative_team")
     .eq("id", id)
-    .single()
-    .range(0, 2000);
+    .single();
 
-  if (!run) {
-    return <p style={{ color: "#f5f2eb", padding: 24 }}>Run not found.</p>;
-  }
+  if (!run) return <p style={{ color: "#f5f2eb", padding: 24 }}>Run not found.</p>;
 
   const { data: existingLog } = await supabase
     .from("readlogs")
@@ -35,12 +27,13 @@ export default async function LogPage({ params }) {
     .eq("user_id", user.id)
     .single();
 
-  const { data: existingReview } = await supabase
+  // Fetch all reviews by this user for this run
+  const { data: userReviews } = await supabase
     .from("reviews")
     .select("*")
     .eq("run_id", id)
     .eq("user_id", user.id)
-    .single();
+    .order("created_at", { ascending: false });
 
   return (
     <div className="nm-page-body" style={{ maxWidth: 560 }}>
@@ -67,7 +60,7 @@ export default async function LogPage({ params }) {
         runId={id}
         issueCount={run.issue_count}
         existingLog={existingLog}
-        existingReview={existingReview}
+        userReviews={userReviews ?? []}
       />
     </div>
   );

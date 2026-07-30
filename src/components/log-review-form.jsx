@@ -2,58 +2,19 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-export default function LogReviewForm({ runId, issueCount, existingLog, existingReview }) {
+export default function LogReviewForm({ runId, issueCount, existingLog, userReviews }) {
   const router = useRouter();
 
   const [status, setStatus] = useState(existingLog?.status ?? "");
   const [issuesRead, setIssuesRead] = useState(existingLog?.issues_read ?? "");
-  const [rating, setRating] = useState(existingReview?.rating ?? 0);
-  // starState tracks each star: 0 = empty, 1 = full, 0.5 = half
-  const [starStates, setStarStates] = useState(() => {
-    const initial = existingReview?.rating ?? 0;
-    return buildStarStates(initial);
-  });
-  const [reviewText, setReviewText] = useState(existingReview?.review_text ?? "");
-  const [spoilers, setSpoilers] = useState(existingReview?.contains_spoilers ?? false);
+  const [score, setScore] = useState(existingLog?.score ?? "");
+  const [reviewText, setReviewText] = useState("");
+  const [spoilers, setSpoilers] = useState(false);
+  const [reviewType, setReviewType] = useState("run");
+  const [issueStart, setIssueStart] = useState("");
+  const [issueEnd, setIssueEnd] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
-
-  function buildStarStates(rating) {
-    // rating is 1-10, stars are 1-5 where each star = 2 points
-    const states = [];
-    for (let i = 1; i <= 5; i++) {
-      const full = i * 2;
-      const half = i * 2 - 1;
-      if (rating >= full) states.push(1);
-      else if (rating >= half) states.push(0.5);
-      else states.push(0);
-    }
-    return states;
-  }
-
-  function starsToRating(states) {
-    return states.reduce((sum, s) => sum + (s === 1 ? 2 : s === 0.5 ? 1 : 0), 0);
-  }
-
-  function handleStarClick(index) {
-    const current = starStates[index];
-    const newStates = [...starStates];
-
-    if (current === 0) {
-      // Empty → full, fill all stars up to this one
-      for (let i = 0; i <= index; i++) newStates[i] = 1;
-      for (let i = index + 1; i < 5; i++) newStates[i] = 0;
-    } else if (current === 1) {
-      // Full → half
-      newStates[index] = 0.5;
-    } else {
-      // Half → empty, clear this star and all after
-      for (let i = index; i < 5; i++) newStates[i] = 0;
-    }
-
-    setStarStates(newStates);
-    setRating(starsToRating(newStates));
-  }
 
   function getPct() {
     if (!issueCount || !issuesRead) return null;
@@ -62,32 +23,54 @@ export default function LogReviewForm({ runId, issueCount, existingLog, existing
     return `${pct}%`;
   }
 
-  async function handleSubmit() {
-    if (!status) { setError("Please select a status."); return; }
-    setSaving(true);
-    setError(null);
+  async function handleSave() {
+  if (!status) { setError("Please select a status."); return; }
+  setSaving(true);
+  setError(null);
 
-    const res = await fetch("/api/log-review", {
+  // Save the log with status, progress, and score
+  const logRes = await fetch("/api/log-review", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      run_id: runId,
+      status,
+      issues_read: issuesRead === "" ? null : Number(issuesRead),
+      score: score === "" ? null : Number(score),
+    }),
+  });
+
+  if (!logRes.ok) {
+    setError("Something went wrong saving your log.");
+    setSaving(false);
+    return;
+  }
+
+  // Only create a review entry if they wrote something
+  if (reviewText.trim()) {
+    const reviewRes = await fetch("/api/reviews/create", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         run_id: runId,
-        status,
-        issues_read: issuesRead === "" ? null : Number(issuesRead),
-        rating: rating === 0 ? null : rating,
-        review_text: reviewText.trim() === "" ? null : reviewText.trim(),
+        review_text: reviewText.trim(),
         contains_spoilers: spoilers,
+        review_type: reviewType,
+        issue_start: reviewType === "issue" && issueStart ? Number(issueStart) : null,
+        issue_end: reviewType === "issue" && issueEnd ? Number(issueEnd) : null,
+        score: score === "" ? null : Number(score),    
       }),
     });
 
-    if (!res.ok) {
-      setError("Something went wrong. Please try again.");
+    if (!reviewRes.ok) {
+      setError("Log saved but review failed to post.");
       setSaving(false);
       return;
     }
-
-    router.push(`/runs/${runId}`);
   }
+
+  router.push(`/runs/${runId}`);
+}
 
   return (
     <div className="log-form">
@@ -96,16 +79,14 @@ export default function LogReviewForm({ runId, issueCount, existingLog, existing
       <div className="log-field">
         <div className="log-label">Status</div>
         <div className="log-status-row">
-          {["Want to read", "Reading", "Complete"].map((s) => (
+          {["Reading", "Complete"].map((s) => (
             <button
               key={s}
               className={`log-status-btn ${status === s ? "on" : ""}`}
-              onClick={() => { 
+              onClick={() => {
                 setStatus(s);
-                if (s === "Complete" && issueCount) { 
-                    setIssuesRead (issueCount);
-                }
-            }}
+                if (s === "Complete" && issueCount) setIssuesRead(issueCount);
+              }}
               type="button"
             >
               {s}
@@ -114,12 +95,10 @@ export default function LogReviewForm({ runId, issueCount, existingLog, existing
         </div>
       </div>
 
-      {/* Progress — hidden for Want to read */}
-      {status !== "Want to read" && status !== "" && (
+      {/* Progress */}
+      {status !== "" && (
         <div className="log-field">
-          <div className="log-label">
-            Progress <span className="log-optional">optional</span>
-          </div>
+          <div className="log-label">Progress <span className="log-optional">optional</span></div>
           <div className="log-progress-row">
             <input
               type="number"
@@ -130,43 +109,83 @@ export default function LogReviewForm({ runId, issueCount, existingLog, existing
               className="log-issues-input"
               placeholder="0"
             />
-            {issueCount && (
-              <span className="log-issues-of">of {issueCount} issues</span>
-            )}
-            {getPct() && (
-              <span className="log-pct-pill">{getPct()}</span>
-            )}
+            {issueCount && <span className="log-issues-of">of {issueCount} issues</span>}
+            {getPct() && <span className="log-pct-pill">{getPct()}</span>}
           </div>
         </div>
       )}
 
-      {/* Rating */}
+      {/* Score */}
       <div className="log-field">
-        <div className="log-label">
-          Rating <span className="log-optional">optional</span>
+        <div className="log-label">Score <span className="log-optional">0–100, optional</span></div>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <input
+            type="number"
+            min="0"
+            max="100"
+            value={score}
+            onChange={(e) => {
+              const val = e.target.value;
+              if (val === "" || (Number(val) >= 0 && Number(val) <= 100)) setScore(val);
+            }}
+            className="log-issues-input"
+            placeholder="—"
+            style={{ width: 72 }}
+          />
+          {score !== "" && <span className="log-pct-pill">{score}/100</span>}
         </div>
-        <div className="log-stars-row">
-          {starStates.map((state, i) => (
-            <button
-              key={i}
-              type="button"
-              className="log-star-btn"
-              onClick={() => handleStarClick(i)}
-              aria-label={`Star ${i + 1}`}
-            >
-              {state === 1 ? "★" : state === 0.5 ? <span style={{fontSize: "24px"}}>½</span> : "☆"}
-            </button>
-          ))}
-          {rating > 0 && (
-            <span className="log-rating-val">{rating}/10</span>
-          )}
+      </div>
+
+      {/* Review type */}
+      <div className="log-field">
+        <div className="log-label">Reviewing</div>
+        <div className="log-status-row">
+          <button
+            className={`log-status-btn ${reviewType === "run" ? "on" : ""}`}
+            onClick={() => setReviewType("run")}
+            type="button"
+          >
+            Whole run
+          </button>
+          <button
+            className={`log-status-btn ${reviewType === "issue" ? "on" : ""}`}
+            onClick={() => setReviewType("issue")}
+            type="button"
+          >
+            Specific issue
+          </button>
         </div>
+        {reviewType === "issue" && (
+     <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
+       <input
+         type="number"
+         min="1"
+         max={issueCount ?? undefined}
+         value={issueStart}
+         onChange={(e) => setIssueStart(e.target.value)}
+         className="log-issues-input"
+         placeholder="From #"
+         style={{ width: 80 }}
+    />
+    <span style={{ color: "rgba(245,242,235,0.4)", fontSize: 13 }}>–</span>
+    <input
+      type="number"
+      min="1"
+      max={issueCount ?? undefined}
+      value={issueEnd}
+      onChange={(e) => setIssueEnd(e.target.value)}
+      className="log-issues-input"
+      placeholder="To #"
+      style={{ width: 80 }}
+    />
+  </div>
+)}
       </div>
 
       {/* Review */}
       <div className="log-field">
         <div className="log-label">
-          Review <span className="log-optional">optional</span>
+          Review <span className="log-optional">optional — only shown publicly if you write something</span>
         </div>
         <textarea
           className="log-textarea"
@@ -177,33 +196,49 @@ export default function LogReviewForm({ runId, issueCount, existingLog, existing
         />
       </div>
 
-      {/* Spoilers */}
-      <label className="log-spoiler-row">
-        <input
-          type="checkbox"
-          checked={spoilers}
-          onChange={(e) => setSpoilers(e.target.checked)}
-        />
-        <span className="log-spoiler-label">Contains spoilers</span>
-      </label>
+      {reviewText.trim() && (
+        <label className="log-spoiler-row">
+          <input
+            type="checkbox"
+            checked={spoilers}
+            onChange={(e) => setSpoilers(e.target.checked)}
+          />
+          <span className="log-spoiler-label">Contains spoilers</span>
+        </label>
+      )}
+
+      {/* Previous reviews */}
+      {userReviews?.length > 0 && (
+        <div style={{ marginTop: 4 }}>
+          <div className="log-label" style={{ marginBottom: 8 }}>Your previous reviews</div>
+          {userReviews.map((review) => (
+            <div key={review.id} style={{
+              background: "#1a2e1a",
+              border: "0.5px solid rgba(45,90,39,0.3)",
+              borderRadius: 6,
+              padding: "10px 12px",
+              marginBottom: 8,
+              fontSize: 13,
+              color: "rgba(245,242,235,0.6)",
+            }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                <span style={{ fontSize: 11, color: "rgba(245,242,235,0.3)" }}>
+                  {new Date(review.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                </span>
+              </div>
+              {review.review_text && <p style={{ margin: 0 }}>{review.review_text}</p>}
+            </div>
+          ))}
+        </div>
+      )}
 
       {error && <p className="log-error">{error}</p>}
 
-      {/* Submit */}
       <div className="log-submit-row">
-        <button
-          className="log-btn-save"
-          onClick={handleSubmit}
-          disabled={saving}
-          type="button"
-        >
+        <button className="log-btn-save" onClick={handleSave} disabled={saving} type="button">
           {saving ? "Saving…" : "Save"}
         </button>
-        <button
-          className="log-btn-cancel"
-          onClick={() => router.back()}
-          type="button"
-        >
+        <button className="log-btn-cancel" onClick={() => router.back()} type="button">
           Cancel
         </button>
       </div>

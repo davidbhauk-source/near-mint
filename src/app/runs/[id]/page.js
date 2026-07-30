@@ -1,6 +1,8 @@
 import { createServerSupabase } from "@/lib/supabase-server";
 import Link from "next/link";
 import AdminRunEdit from "@/components/admin-run-edit";
+import ReviewList from "@/components/review-list";
+import BookmarkButton from "@/components/bookmark-button";
 
 export const revalidate = 0
 
@@ -15,9 +17,7 @@ export async function generateMetadata({ params }) {
     .eq("id", id)
     .single();
 
-  if (!run) {
-    return { title: "Run not found — Near Mint" };
-  }
+  if (!run) return { title: "Run not found — Near Mint" };
 
   return {
     title: `${run.title} — Near Mint`,
@@ -35,33 +35,104 @@ export default async function RunPage({ params }) {
   const resolvedParams = await params;
   const { id } = resolvedParams;
 
+  const { data: { user } } = await supabase.auth.getUser();
+  const isAdmin = user?.id === "634746c5-efe9-43ea-ba4d-0eea96cb95c7";
+
+  // Check if user has bookmarked this run
+let isBookmarked = false;
+if (user) {
+  const { data: log } = await supabase
+    .from("readlogs")
+    .select("bookmarked")
+    .eq("run_id", id)
+    .eq("user_id", user.id)
+    .single();
+  isBookmarked = log?.bookmarked ?? false;
+}
+
   const { data: run, error } = await supabase
     .from("runs")
     .select("*")
     .eq("id", id)
-    .single()
-    .range(0, 2000);
+    .single();
 
-    const { data: { user } } = await supabase.auth.getUser();
-    const isAdmin = user?.id === "634746c5-efe9-43ea-ba4d-0eea96cb95c7";
-
-  const { data: reviews } = await supabase
+  const { data: reviews, error: reviewsError } = await supabase
     .from("reviews")
-    .select("id, rating, review_text, contains_spoilers, created_at, user_id")
+    .select("*")
     .eq("run_id", id)
     .order("created_at", { ascending: false });
 
+    console.log("REVIEWS:", reviews);
+    console.log("REVIEWS ERROR:", reviewsError);
+
+
+    // Fetch scores from readlogs for each reviewer
+
+
+
   const safeReviews = reviews ?? [];
 
-  const avgRating = safeReviews.length > 0
-    ? (safeReviews.reduce((sum, r) => sum + (r.rating ?? 0), 0) / safeReviews.length).toFixed(1)
+// Fetch profiles for reviewers separately
+const reviewerUserIds = [...new Set(safeReviews.map(r => r.user_id))];
+let profileMap = {};
+if (reviewerUserIds.length > 0) {
+  const { data: reviewProfiles } = await supabase
+    .from("profiles")
+    .select("id, username, display_name")
+    .in("id", reviewerUserIds);
+  (reviewProfiles ?? []).forEach(p => {
+    profileMap[p.id] = p;
+  });
+}
+
+const reviewsWithProfiles = safeReviews.map(r => ({
+  ...r,
+  profiles: profileMap[r.user_id] ?? null,
+  reviewer_score: r.score,
+}));
+
+
+
+console.log("REVIEWS WITH PROFILES SCORES:", reviewsWithProfiles.map(r => ({ 
+  user_id: r.user_id, 
+  run_id: r.run_id,
+  reviewer_score: r.reviewer_score,
+  key: `${r.user_id}-${r.run_id}`
+})));
+
+  const { data: likes } = await supabase
+    .from("review_likes")
+    .select("review_id, user_id");
+
+  const likeCounts = {};
+  const userLikes = new Set();
+  (likes ?? []).forEach(({ review_id, user_id }) => {
+    likeCounts[review_id] = (likeCounts[review_id] ?? 0) + 1;
+    if (user_id === user?.id) userLikes.add(review_id);
+  });
+
+  const reviewsWithLikes = reviewsWithProfiles.map((r) => ({
+    ...r,
+    like_count: likeCounts[r.id] ?? 0,
+    user_liked: userLikes.has(r.id),
+  }));
+
+  const scoredReviews = reviewsWithProfiles.filter(r => r.reviewer_score !== null && r.reviewer_score !== undefined);
+  const avgScore = scoredReviews.length > 0
+    ? Math.round(scoredReviews.reduce((sum, r) => sum + Number(r.reviewer_score), 0) / scoredReviews.length)
     : null;
+    
+console.log("REVIEWS WITH PROFILES:", reviewsWithProfiles.map(r => ({
+  id: r.id,
+  score: r.score,
+  reviewer_score: r.reviewer_score,
+})));
+console.log("SCORED REVIEWS:", scoredReviews.length);
+console.log("AVG SCORE:", avgScore);
 
   if (error) {
     return <pre>{JSON.stringify(error, null, 2)}</pre>;
   }
-
-   
 
   return (
     <div className="nm-page-body">
@@ -70,7 +141,6 @@ export default async function RunPage({ params }) {
 
       {isAdmin && <AdminRunEdit run={run} />}
 
-      {/* Hero */}
       <div className="rd-hero">
         <div className="rd-cover-wrap">
           {run.cover_url ? (
@@ -81,47 +151,43 @@ export default async function RunPage({ params }) {
         </div>
 
         <div className="rd-info">
-          {run.publisher && (
-            <div className="rd-publisher">{run.publisher}</div>
-          )}
+          {run.publisher && <div className="rd-publisher">{run.publisher}</div>}
           <h1 className="rd-title">{run.title}</h1>
           <div className="rd-meta">
             {run.start_year && (
               <span>{run.start_year}{run.end_year ? ` – ${run.end_year}` : ""}</span>
             )}
-            {run.issue_count && (
-              <span>{run.issue_count} issues</span>
-            )}
+            {run.issue_count && <span>{run.issue_count} issues</span>}
           </div>
 
-          {avgRating && (
+          {avgScore !== null && (
             <div className="rd-rating-row">
-              <span className="rd-avg">{avgRating}</span>
+              <span className="rd-avg">{avgScore}</span>
               <div>
-                <div className="rd-stars">
-                  {renderStars(avgRating)}
-                </div>
+                <div style={{ fontSize: 12, color: "rgba(245,242,235,0.4)" }}>out of 100</div>
                 <div className="rd-review-count">
-                  {safeReviews.length} {safeReviews.length === 1 ? "review" : "reviews"}
+                  {reviewsWithLikes.length} {reviewsWithLikes.length === 1 ? "review" : "reviews"}
                 </div>
               </div>
             </div>
           )}
 
           <div className="rd-actions">
-            <Link href={`/runs/${id}/log`} className="rd-btn-primary">
-              + Log this run
-            </Link>
-            <Link href={`/runs/${id}/log`} className="rd-btn-secondary">
-              Write a review
-            </Link>
-          </div>
+  <Link href={`/runs/${id}/log`} className="rd-btn-primary">
+    + Log this run
+  </Link>
+  <Link href={`/runs/${id}/log`} className="rd-btn-secondary">
+    Write a review
+  </Link>
+  {user && (
+    <BookmarkButton runId={id} initialBookmarked={isBookmarked} />
+  )}
+</div>
         </div>
       </div>
 
       <hr className="rd-divider" />
 
-      {/* Body */}
       <div className="rd-body">
         <div className="rd-main">
 
@@ -135,48 +201,24 @@ export default async function RunPage({ params }) {
           <div className="rd-section">
             <div className="rd-reviews-header">
               <div className="rd-section-label" style={{ margin: 0 }}>
-                Reviews {safeReviews.length > 0 && (
-                  <span className="rd-review-badge">{safeReviews.length}</span>
+                Reviews {reviewsWithLikes.length > 0 && (
+                  <span className="rd-review-badge">{reviewsWithLikes.length}</span>
                 )}
               </div>
               <Link href={`/runs/${id}/log`} className="rd-btn-secondary" style={{ fontSize: 11, padding: "4px 12px" }}>
                 Write a review
               </Link>
             </div>
-
-            {safeReviews.length === 0 ? (
-              <p className="rd-empty">No reviews yet — be the first.</p>
-            ) : (
-              <ul className="rd-reviews-list">
-                {safeReviews.map((review) => (
-                  <li key={review.id} className="rd-review-card">
-                    <div className="rd-review-top">
-                      <span className="rd-review-stars">
-                        {review.rating ? renderStars(review.rating / 2) : null}
-                      </span>
-                      <span className="rd-review-date">
-                        {new Date(review.created_at).toLocaleDateString("en-US", {
-                          month: "short", day: "numeric", year: "numeric"
-                        })}
-                      </span>
-                    </div>
-                    {review.contains_spoilers && (
-                      <p className="rd-spoiler-warning">⚠ Contains spoilers</p>
-                    )}
-                    {review.review_text && (
-                      <p className="rd-review-text">{review.review_text}</p>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            )}
+            <ReviewList
+              reviews={reviewsWithLikes}
+              currentUserId={user?.id ?? null}
+              runId={id}
+            />
           </div>
 
         </div>
 
-        {/* Sidebar */}
         <div className="rd-sidebar">
-
           {run.creative_team && (
             <div className="rd-sidebar-card">
               <div className="rd-section-label">Creative team</div>
@@ -216,27 +258,15 @@ export default async function RunPage({ params }) {
             <div className="rd-detail-row">
               <span className="rd-detail-label">Status</span>
               <span className="rd-detail-val" style={{
-             color: run.end_year?.toLowerCase() === "present" ? "#97c459" : "inherit"
-            }}>
-             {run.end_year?.toLowerCase() === "present" ? "Ongoing" : "Complete"}
-             </span>
+                color: run.end_year?.toLowerCase() === "present" ? "#97c459" : "inherit"
+              }}>
+                {run.end_year?.toLowerCase() === "present" ? "Ongoing" : "Complete"}
+              </span>
             </div>
           </div>
-
         </div>
       </div>
 
     </div>
   );
-}
-
-function renderStars(rating) {
-  // rating is out of 5 here
-  const stars = [];
-  for (let i = 1; i <= 5; i++) {
-    if (rating >= i) stars.push("★");
-    else if (rating >= i - 0.5) stars.push("½");
-    else stars.push("☆");
-  }
-  return stars.join("");
 }

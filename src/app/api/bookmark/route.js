@@ -7,13 +7,27 @@ export async function POST(req) {
 
   const { run_id, bookmarked } = await req.json();
 
-  const { error } = await supabase
+  // Check if log row exists
+  const { data: existing } = await supabase
     .from("readlogs")
-    .upsert(
-      { run_id, user_id: user.id, bookmarked },
-      { onConflict: "run_id,user_id" }
-    );
+    .select("id")
+    .eq("run_id", run_id)
+    .eq("user_id", user.id)
+    .single();
 
-  if (error) return Response.json({ error: error.message }, { status: 500 });
+  if (existing) {
+    // Update existing row
+    await supabase
+      .from("readlogs")
+      .update({ bookmarked })
+      .eq("run_id", run_id)
+      .eq("user_id", user.id);
+  } else {
+    // Insert new row with just bookmark — no status required
+    await supabase
+      .from("readlogs")
+      .insert({ run_id, user_id: user.id, bookmarked });
+  }
+
   return Response.json({ ok: true });
 }

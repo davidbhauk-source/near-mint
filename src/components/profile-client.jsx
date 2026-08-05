@@ -2,6 +2,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import SettingsPanel from "@/components/settings-panel";
+import { useRouter } from "next/navigation";
+import CreateListForm from "@/components/create-list-form";
+
 
 export default function ProfileClient({
   profile,
@@ -14,10 +17,12 @@ export default function ProfileClient({
   followerCount,
   followingCount, 
   bookmarkedRuns,
+  userLists,
 }) {
   const [activeTab, setActiveTab] = useState("stats");
   const [settingsOpen, setSettingsOpen] = useState(false);
-
+  const [creatingList, setCreatingList] = useState(false);
+  const router = useRouter();
   const username = profile?.username ?? "Anonymous";
   const bio = profile?.bio ?? "No bio yet.";
   const initial = username[0].toUpperCase();
@@ -134,15 +139,15 @@ export default function ProfileClient({
 
       {/* Tabs */}
       <div className="tabs">
-        {["stats", "reviews", "logs", "wanttoread"].map((tab) => (
+        {["stats", "reviews", "logs", "readlist", "lists"].map((tab) => (
           <button
             key={tab}
             className={`tab ${activeTab === tab ? "on" : ""}`}
             onClick={() => setActiveTab(tab)}
             type="button"
           >
-            {tab === "stats" ? "Stats" : tab === "reviews" ? "Reviews" : tab === "logs" ? "All logged runs"
-            : "WantToRead"}
+            {tab === "stats" ? "Stats" : tab === "reviews" ? "Reviews" : tab === "logs" ? "All logged runs" : tab === "readlist" ? "Readlist"
+            : "Lists"}
           </button>
         ))}
       </div>
@@ -196,10 +201,10 @@ export default function ProfileClient({
       {activeTab === "reviews" && (
         <div>
           {reviews.length === 0 ? (
-            <p className="profile-empty">No reviews written yet.</p>
+      <p className="profile-empty">No reviews written yet.</p>
           ) : (
             reviews.map((review) => (
-              <Link key={review.id} href={`/runs/${review.run_id}`} className="review-card" style={{ textDecoration: "none" }}>
+              <Link key={review.id} href={`/reviews/${review.id}`} className="review-card" style={{ textDecoration: "none" }}>
                 {review.runs?.cover_url ? (
                   <img src={review.runs.cover_url} alt={review.runs.title} className="review-thumb" />
                 ) : (
@@ -207,10 +212,8 @@ export default function ProfileClient({
                 )}
                 <div className="review-body">
                   <div className="review-run">{review.runs?.title}</div>
-                  {review.rating && (
-                    <div className="review-stars">
-                      {renderStars(review.rating)} · {review.rating}/10
-                    </div>
+                  {review.score !== null && review.score !== undefined && (
+                    <div className="review-stars">{review.score}/100</div>
                   )}
                   {review.review_text && (
                     <div className="review-text">{review.review_text}</div>
@@ -267,7 +270,7 @@ export default function ProfileClient({
         </div>
       )}
 
-      {activeTab === "Readlist" && (
+      {activeTab === "readlist" && (
   <div>
     {bookmarkedRuns.length === 0 ? (
       <p className="profile-empty">No bookmarks yet — bookmark runs from their detail page.</p>
@@ -283,6 +286,55 @@ export default function ProfileClient({
             <div className="log-meta">
               <div className="log-title">{run.title}</div>
               <div className="log-status">{run.creative_team?.writers?.join(", ") ?? ""}</div>
+            </div>
+          </Link>
+        ))}
+      </div>
+    )}
+  </div>
+)}
+
+{activeTab === "lists" && (
+  <div>
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+      <p style={{ fontSize: 13, color: "rgba(245,242,235,0.35)", margin: 0 }}>{userLists.length} {userLists.length === 1 ? "list" : "lists"}</p>
+      <button className="log-btn-save" onClick={() => setCreatingList(true)} type="button" style={{ fontSize: 12, padding: "6px 14px" }}>
+        + New list
+      </button>
+    </div>
+
+    {creatingList && (
+      <CreateListForm onCreated={(list) => {
+        setCreatingList(false);
+        router.push(`/lists/${list.id}`);
+      }} onCancel={() => setCreatingList(false)} />
+    )}
+
+    {userLists.length === 0 && !creatingList ? (
+      <p className="profile-empty">No lists yet — create your first one above.</p>
+    ) : (
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {userLists.map((list) => (
+          <Link key={list.id} href={`/lists/${list.id}`} style={{ textDecoration: "none" }}>
+            <div style={{
+              background: "#1a2e1a",
+              border: "0.5px solid rgba(45,90,39,0.3)",
+              borderRadius: 8,
+              padding: "14px 16px",
+              cursor: "pointer",
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                <span style={{ fontSize: 14, fontWeight: 500, color: "#f5f2eb" }}>{list.title}</span>
+                {list.is_ranked && (
+                  <span style={{ fontSize: 10, background: "rgba(151,196,89,0.15)", color: "#97c459", padding: "1px 6px", borderRadius: 3 }}>Ranked</span>
+                )}
+                {!list.is_public && (
+                  <span style={{ fontSize: 10, background: "rgba(245,242,235,0.08)", color: "rgba(245,242,235,0.4)", padding: "1px 6px", borderRadius: 3 }}>Private</span>
+                )}
+              </div>
+              {list.description && (
+                <p style={{ fontSize: 12, color: "rgba(245,242,235,0.4)", margin: "0 0 4px" }}>{list.description}</p>
+              )}
             </div>
           </Link>
         ))}

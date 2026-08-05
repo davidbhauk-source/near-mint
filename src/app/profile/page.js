@@ -19,17 +19,6 @@ export async function generateMetadata() {
   return {
     title: profile?.username ? `${profile.username} — Near Mint` : "Profile — Near Mint",
   };
-
-  const { count: followerCount } = await supabase
-  .from("follows")
-  .select("*", { count: "exact", head: true })
-  .eq("following_id", userId);
-
-  const { count: followingCount } = await supabase
-  .from("follows")
-  .select("*", { count: "exact", head: true })
-  .eq("follower_id", userId);
-
 }
 
 export default async function ProfilePage() {
@@ -134,6 +123,12 @@ const bookmarkedRuns = (bookmarks ?? []).map(b => b.runs).filter(Boolean);
     topArtist: topArtist ? { name: topArtist[0], count: topArtist[1] } : null,
   };
 
+  const { data: userLists } = await supabase
+    .from("lists")
+    .select("id, title, description, is_ranked, is_public, created_at")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
+
   return (
     <ProfileClient
       profile={{ ...profile, email, favourite_run_data: favouriteRuns }}
@@ -143,9 +138,10 @@ const bookmarkedRuns = (bookmarks ?? []).map(b => b.runs).filter(Boolean);
       recentLogs={safeLogs.slice(0, 8)}
       stats={stats}
       readingCount={readingCount}
-       followerCount={followerCount ?? 0}
-       followingCount={followingCount ?? 0}
-       bookmarkedRuns={bookmarkedRuns}
+      followerCount={followerCount ?? 0}
+      followingCount={followingCount ?? 0}
+      bookmarkedRuns={bookmarkedRuns}
+      userLists={userLists ?? []}
     />
   );
 }

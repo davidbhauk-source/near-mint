@@ -176,9 +176,6 @@ console.log("AVG SCORE:", avgScore);
   <Link href={`/runs/${id}/log`} className="rd-btn-primary">
     + Log this run
   </Link>
-  <Link href={`/runs/${id}/log`} className="rd-btn-secondary">
-    Write a review
-  </Link>
   {user && (
     <BookmarkButton runId={id} initialBookmarked={isBookmarked} />
   )}

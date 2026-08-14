@@ -36,7 +36,7 @@ export default async function HomePage() {
     .from("runs")
     .select("*")
     .order("title")
-    .range(0, 2000);
+    .range(0, 5000);
 
   const allRuns = runs ?? [];
 

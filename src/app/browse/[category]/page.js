@@ -65,7 +65,7 @@ export default async function CategoryPage({ params, searchParams }) {
   const { data: allRuns } = await supabase
     .from("runs")
     .select("*")
-    .range(0, 2000);
+    .range(0, 5000);
 
 
   const { data: allLogs } = await supabase

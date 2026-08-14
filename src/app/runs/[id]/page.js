@@ -1,8 +1,9 @@
 import { createServerSupabase } from "@/lib/supabase-server";
 import Link from "next/link";
 import AdminRunEdit from "@/components/admin-run-edit";
-import ReviewList from "@/components/review-list";
 import BookmarkButton from "@/components/bookmark-button";
+import AddToListButton from "@/components/add-to-list-button";
+import ReviewList from "@/components/review-list";
 
 export const revalidate = 0
 
@@ -38,17 +39,16 @@ export default async function RunPage({ params }) {
   const { data: { user } } = await supabase.auth.getUser();
   const isAdmin = user?.id === "634746c5-efe9-43ea-ba4d-0eea96cb95c7";
 
-  // Check if user has bookmarked this run
-let isBookmarked = false;
-if (user) {
-  const { data: log } = await supabase
-    .from("readlogs")
-    .select("bookmarked")
-    .eq("run_id", id)
-    .eq("user_id", user.id)
-    .single();
-  isBookmarked = log?.bookmarked ?? false;
-}
+  let isBookmarked = false;
+  if (user) {
+    const { data: log } = await supabase
+      .from("readlogs")
+      .select("bookmarked")
+      .eq("run_id", id)
+      .eq("user_id", user.id)
+      .single();
+    isBookmarked = log?.bookmarked ?? false;
+  }
 
   const { data: run, error } = await supabase
     .from("runs")
@@ -56,49 +56,31 @@ if (user) {
     .eq("id", id)
     .single();
 
-  const { data: reviews, error: reviewsError } = await supabase
+  const { data: reviews } = await supabase
     .from("reviews")
     .select("*")
     .eq("run_id", id)
     .order("created_at", { ascending: false });
 
-    console.log("REVIEWS:", reviews);
-    console.log("REVIEWS ERROR:", reviewsError);
-
-
-    // Fetch scores from readlogs for each reviewer
-
-
-
   const safeReviews = reviews ?? [];
 
-// Fetch profiles for reviewers separately
-const reviewerUserIds = [...new Set(safeReviews.map(r => r.user_id))];
-let profileMap = {};
-if (reviewerUserIds.length > 0) {
-  const { data: reviewProfiles } = await supabase
-    .from("profiles")
-    .select("id, username, display_name")
-    .in("id", reviewerUserIds);
-  (reviewProfiles ?? []).forEach(p => {
-    profileMap[p.id] = p;
-  });
-}
+  const reviewerUserIds = [...new Set(safeReviews.map(r => r.user_id))];
+  let profileMap = {};
+  if (reviewerUserIds.length > 0) {
+    const { data: reviewProfiles } = await supabase
+      .from("profiles")
+      .select("id, username, display_name")
+      .in("id", reviewerUserIds);
+    (reviewProfiles ?? []).forEach(p => {
+      profileMap[p.id] = p;
+    });
+  }
 
-const reviewsWithProfiles = safeReviews.map(r => ({
-  ...r,
-  profiles: profileMap[r.user_id] ?? null,
-  reviewer_score: r.score,
-}));
-
-
-
-console.log("REVIEWS WITH PROFILES SCORES:", reviewsWithProfiles.map(r => ({ 
-  user_id: r.user_id, 
-  run_id: r.run_id,
-  reviewer_score: r.reviewer_score,
-  key: `${r.user_id}-${r.run_id}`
-})));
+  const reviewsWithProfiles = safeReviews.map(r => ({
+    ...r,
+    profiles: profileMap[r.user_id] ?? null,
+    reviewer_score: r.score,
+  }));
 
   const { data: likes } = await supabase
     .from("review_likes")
@@ -121,14 +103,6 @@ console.log("REVIEWS WITH PROFILES SCORES:", reviewsWithProfiles.map(r => ({
   const avgScore = scoredReviews.length > 0
     ? Math.round(scoredReviews.reduce((sum, r) => sum + Number(r.reviewer_score), 0) / scoredReviews.length)
     : null;
-    
-console.log("REVIEWS WITH PROFILES:", reviewsWithProfiles.map(r => ({
-  id: r.id,
-  score: r.score,
-  reviewer_score: r.reviewer_score,
-})));
-console.log("SCORED REVIEWS:", scoredReviews.length);
-console.log("AVG SCORE:", avgScore);
 
   if (error) {
     return <pre>{JSON.stringify(error, null, 2)}</pre>;
@@ -160,7 +134,7 @@ console.log("AVG SCORE:", avgScore);
             {run.issue_count && <span>{run.issue_count} issues</span>}
           </div>
 
-          {avgScore !== null && (
+          {avgScore !== null && !isNaN(avgScore) && (
             <div className="rd-rating-row">
               <span className="rd-avg">{avgScore}</span>
               <div>
@@ -173,13 +147,16 @@ console.log("AVG SCORE:", avgScore);
           )}
 
           <div className="rd-actions">
-  <Link href={`/runs/${id}/log`} className="rd-btn-primary">
-    + Log this run
-  </Link>
-  {user && (
-    <BookmarkButton runId={id} initialBookmarked={isBookmarked} />
-  )}
-</div>
+            <Link href={`/runs/${id}/log`} className="rd-btn-primary">
+              + Log this run
+            </Link>
+            {user && (
+              <BookmarkButton runId={id} initialBookmarked={isBookmarked} />
+            )}
+            {user && (
+              <AddToListButton runId={id} />
+            )}
+          </div>
         </div>
       </div>
 
@@ -202,9 +179,6 @@ console.log("AVG SCORE:", avgScore);
                   <span className="rd-review-badge">{reviewsWithLikes.length}</span>
                 )}
               </div>
-              <Link href={`/runs/${id}/log`} className="rd-btn-secondary" style={{ fontSize: 11, padding: "4px 12px" }}>
-                Write a review
-              </Link>
             </div>
             <ReviewList
               reviews={reviewsWithLikes}

@@ -139,14 +139,14 @@ export default function ProfileClient({
 
       {/* Tabs */}
       <div className="tabs">
-        {["stats", "reviews", "logs", "readlist", "lists"].map((tab) => (
+        {["stats", "reviews", "logs", "Want to Read", "lists"].map((tab) => (
           <button
             key={tab}
             className={`tab ${activeTab === tab ? "on" : ""}`}
             onClick={() => setActiveTab(tab)}
             type="button"
           >
-            {tab === "stats" ? "Stats" : tab === "reviews" ? "Reviews" : tab === "logs" ? "All logged runs" : tab === "readlist" ? "Readlist"
+            {tab === "stats" ? "Stats" : tab === "reviews" ? "Reviews" : tab === "logs" ? "All logged runs" : tab === "Want to Read" ? "Want to Read"
             : "Lists"}
           </button>
         ))}
@@ -270,7 +270,7 @@ export default function ProfileClient({
         </div>
       )}
 
-      {activeTab === "readlist" && (
+      {activeTab === "Want to Read" && (
   <div>
     {bookmarkedRuns.length === 0 ? (
       <p className="profile-empty">No bookmarks yet — bookmark runs from their detail page.</p>
@@ -325,9 +325,6 @@ export default function ProfileClient({
             }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
                 <span style={{ fontSize: 14, fontWeight: 500, color: "#f5f2eb" }}>{list.title}</span>
-                {list.is_ranked && (
-                  <span style={{ fontSize: 10, background: "rgba(151,196,89,0.15)", color: "#97c459", padding: "1px 6px", borderRadius: 3 }}>Ranked</span>
-                )}
                 {!list.is_public && (
                   <span style={{ fontSize: 10, background: "rgba(245,242,235,0.08)", color: "rgba(245,242,235,0.4)", padding: "1px 6px", borderRadius: 3 }}>Private</span>
                 )}

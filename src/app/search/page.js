@@ -13,7 +13,7 @@ export default async function SearchPage() {
     .from("runs")
     .select("*")
     .order("title")
-    .range(0, 2000);
+    .range(0, 5000);
 
   // Fetch average ratings
   const { data: reviews } = await supabase

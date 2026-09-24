@@ -2,9 +2,13 @@ export async function GET(req) {
   const { searchParams } = new URL(req.url);
   const q = searchParams.get("q");
   const offset = searchParams.get("offset") ?? "0";
+  const year = searchParams.get("year");
 
   if (!q) return Response.json({ error: "No query" }, { status: 400 });
 
+  let filter = `name:${encodeURIComponent(q)}`;
+  if (year) filter += `,start_year:${year}`;
+  
   const url = `https://comicvine.gamespot.com/api/volumes/?api_key=${process.env.COMICVINE_API_KEY}&format=json&filter=name:${encodeURIComponent(q)}&field_list=id,name,publisher,start_year,count_of_issues,image,description&limit=25&offset=${offset}`;
 
   const res = await fetch(url, {

@@ -11,6 +11,7 @@ export default function SuggestClient() {
   const [suggesting, setSuggesting] = useState(null);
   const [success, setSuccess] = useState(null);
   const [error, setError] = useState(null);
+  const [yearFilter, setYearFilter] = useState("");
 
   async function handleSearch() {
     if (!query.trim()) return;
@@ -19,8 +20,11 @@ export default function SuggestClient() {
     setOffset(0);
     setError(null);
     setSuccess(null);
+  
+    const params = new URLSearchParams({ q: query, offset: "0" });
+    if (yearFilter.trim()) params.append("year", yearFilter.trim());
 
-    const res = await fetch(`/api/comicvine/search?q=${encodeURIComponent(query)}&offset=0`);
+    const res = await fetch(`/api/comicvine/search?${params}`);
     const data = await res.json();
 
     if (!res.ok) {
@@ -28,15 +32,17 @@ export default function SuggestClient() {
     } else {
       setResults(data.results ?? []);
       setTotal(data.total ?? 0);
-    }
+   }
     setSearching(false);
   }
 
   async function handleLoadMore() {
     setLoadingMore(true);
     const newOffset = offset + 25;
-
-    const res = await fetch(`/api/comicvine/search?q=${encodeURIComponent(query)}&offset=${newOffset}`);
+    const params = new URLSearchParams({ q: query, offset: String(newOffset) });
+    if (yearFilter.trim()) params.append("year", yearFilter.trim());
+  
+    const res = await fetch(`/api/comicvine/search?${params}`);
     const data = await res.json();
 
     if (!res.ok) {
@@ -80,6 +86,17 @@ export default function SuggestClient() {
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSearch()}
           style={{ flex: 1 }}
+        />
+        <input
+          className="auth-input"
+          placeholder="Year"
+          value={yearFilter}
+          onChange={(e) => setYearFilter(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+          style={{ width: 80 }}
+          type="number"
+          min="1930"
+          max="2030"
         />
         <button
           className="log-btn-save"

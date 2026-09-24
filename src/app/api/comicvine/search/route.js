@@ -9,7 +9,7 @@ export async function GET(req) {
   let filter = `name:${encodeURIComponent(q)}`;
   if (year) filter += `,start_year:${year}`;
   
-  const url = `https://comicvine.gamespot.com/api/volumes/?api_key=${process.env.COMICVINE_API_KEY}&format=json&filter=name:${encodeURIComponent(q)}&field_list=id,name,publisher,start_year,count_of_issues,image,description&limit=25&offset=${offset}`;
+  const url = `https://comicvine.gamespot.com/api/volumes/?api_key=${process.env.COMICVINE_API_KEY}&format=json&filter=${filter}&field_list=id,name,publisher,start_year,count_of_issues,image,description&limit=25&offset=${offset}`;
 
   const res = await fetch(url, {
     headers: { "User-Agent": "NearMint/1.0" },

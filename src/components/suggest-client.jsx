@@ -12,15 +12,19 @@ export default function SuggestClient() {
   const [success, setSuccess] = useState(null);
   const [error, setError] = useState(null);
   const [yearFilter, setYearFilter] = useState("");
+  const [nextOffset, setNextOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
 
   async function handleSearch() {
     if (!query.trim()) return;
     setSearching(true);
     setResults([]);
     setOffset(0);
+    setNextOffset(0);    // add
+    setHasMore(false);   // add
     setError(null);
     setSuccess(null);
-  
+
     const params = new URLSearchParams({ q: query, offset: "0" });
     if (yearFilter.trim()) params.append("year", yearFilter.trim());
 
@@ -32,27 +36,28 @@ export default function SuggestClient() {
     } else {
       setResults(data.results ?? []);
       setTotal(data.total ?? 0);
-   }
+      setNextOffset(data.nextOffset ?? 0);   // add
+      setHasMore(data.hasMore ?? false);     // add
+    }
     setSearching(false);
   }
-
   async function handleLoadMore() {
-    setLoadingMore(true);
-    const newOffset = offset + 25;
-    const params = new URLSearchParams({ q: query, offset: String(newOffset) });
-    if (yearFilter.trim()) params.append("year", yearFilter.trim());
-  
-    const res = await fetch(`/api/comicvine/search?${params}`);
-    const data = await res.json();
+  setLoadingMore(true);
+  const params = new URLSearchParams({ q: query, offset: String(nextOffset) });
+  if (yearFilter.trim()) params.append("year", yearFilter.trim());
 
-    if (!res.ok) {
-      setError("Failed to load more.");
-    } else {
-      setResults((prev) => [...prev, ...(data.results ?? [])]);
-      setOffset(newOffset);
-    }
-    setLoadingMore(false);
+  const res = await fetch(`/api/comicvine/search?${params}`);
+  const data = await res.json();
+
+  if (!res.ok) {
+    setError("Failed to load more.");
+  } else {
+    setResults((prev) => [...prev, ...(data.results ?? [])]);
+    setNextOffset(data.nextOffset ?? nextOffset);
+    setHasMore(data.hasMore ?? false);
   }
+  setLoadingMore(false);
+}
 
   async function handleSuggest(volume) {
     setSuggesting(volume.id);
@@ -73,8 +78,6 @@ export default function SuggestClient() {
     }
     setSuggesting(null);
   }
-
-  const hasMore = results.length < total;
 
   return (
     <div>
@@ -163,7 +166,7 @@ export default function SuggestClient() {
             disabled={loadingMore}
             type="button"
           >
-            {loadingMore ? "Loading…" : `Load more (${total - results.length} remaining)`}
+           {loadingMore ? "Loading…" : "Load more"}
           </button>
         </div>
       )}

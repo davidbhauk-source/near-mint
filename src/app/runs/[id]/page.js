@@ -234,6 +234,20 @@ export default async function RunPage({ params }) {
                 {run.end_year?.toLowerCase() === "present" ? "Ongoing" : "Complete"}
               </span>
             </div>
+            {run.comicvine_id && (
+           <div className="rd-detail-row">
+              <span className="rd-detail-label">Source</span>
+              <a
+                href={`https://comicvine.gamespot.com/volume/4050-${run.comicvine_id}/`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rd-detail-val"
+                style={{ color: "#97c459" }}
+              >
+                Comic Vine ↗
+              </a>
+            </div>
+          )}
           </div>
         </div>
       </div>

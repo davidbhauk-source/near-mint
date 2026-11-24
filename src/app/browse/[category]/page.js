@@ -1,6 +1,7 @@
 import { createServerSupabase } from "@/lib/supabase-server";
 import Link from "next/link";
 import BrowseCategoryClient from "@/components/browse-category-client";
+import { matchesPublisher } from "@/lib/publishers";
 
 const CATEGORY_CONFIG = {
   popular: {
@@ -122,6 +123,13 @@ export default async function CategoryPage({ params, searchParams }) {
       (range.max === Infinity || r.issue_count <= range.max)
     );
   }
+  const publisherKey = resolvedSearch.publisher;
+  if (publisherKey) {
+    runs = runs.filter((r) => matchesPublisher(r.publisher, publisherKey));
+  }
+
+const pubLabel = { marvel: "Marvel", dc: "DC", image: "Image" }[publisherKey?.toLowerCase()];
+
 
   return (
     <div className="nm-page-body">
@@ -129,7 +137,9 @@ export default async function CategoryPage({ params, searchParams }) {
 
       <div className="cat-header">
         <h1 className="cat-title">{config.label}</h1>
-        <p className="cat-desc">{config.description} · {runs.length} runs</p>
+        <p className="cat-desc">
+          {config.description}{pubLabel ? ` · ${pubLabel} only` : ""} · {runs.length} runs
+        </p>
       </div>
 
       <BrowseCategoryClient runs={runs} />

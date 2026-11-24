@@ -14,7 +14,7 @@ body {
 }
 
 .navbar {
-  height: 52px;
+  height: 55px;
   background: var(--nm-dark);
   display: flex;
   align-items: center;
@@ -27,7 +27,7 @@ body {
 }
 
 .wordmark {
-  font-size:24px;
+  font-size:27px;
   font-weight: 500;
   color: var(--nm-cream);
   text-decoration: none;
@@ -38,8 +38,8 @@ body {
 }
 
 .wordmark-dot {
-  width: 10px;
-  height: 10px;
+  width: 13px;
+  height: 13px;
   border-radius: 50%;
   background: var(--nm-accent);
 }
@@ -47,7 +47,7 @@ body {
 .nav-links { display: flex; gap: 4px; flex: 1; }
 
 .nav-link {
-  font-size: 15px;
+  font-size: 18px;
   color: rgba(245, 242, 235, 0.55);
   padding: 6px 12px;
   border-radius: 6px;

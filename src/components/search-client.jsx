@@ -1,6 +1,7 @@
 'use client'
 import { useState, useMemo } from "react";
 import Link from "next/link";
+import { matchesPublisher } from "@/lib/publishers";
 
 const DECADES = ["1960s", "1970s", "1980s", "1990s", "2000s", "2010s", "2020s"];
 const LENGTHS = [
@@ -9,7 +10,7 @@ const LENGTHS = [
   { label: "Long (51–100)", key: "long", min: 51, max: 100 },
   { label: "Epic (100+)", key: "epic", min: 101, max: Infinity },
 ];
-const PUBLISHERS = ["All", "Marvel", "DC", "Image", "Indie"];
+const PUBLISHERS = ["All", "Marvel", "DC", "Image"];
 
 export default function SearchClient({ runs, topRated }) {
   const [query, setQuery] = useState("");
@@ -44,15 +45,12 @@ export default function SearchClient({ runs, topRated }) {
       });
   }, [query, runs]);
 
-  const filteredRuns = useMemo(() => {
-    if (publisher === "All") return runs;
-    if (publisher === "Indie") {
-      return runs.filter(
-        (r) => !["Marvel", "DC", "Image"].includes(r.publisher)
-      );
-    }
-    return runs.filter((r) => r.publisher === publisher);
-  }, [runs, publisher]);
+  const filteredRuns = useMemo(
+    () => runs.filter((r) => matchesPublisher(r.publisher, publisher)),
+    [runs, publisher]
+  );
+
+  const pubParam = publisher === "All" ? "" : `&publisher=${publisher.toLowerCase()}`;
 
   const isSearching = query.trim().length > 0;
 
@@ -146,7 +144,7 @@ export default function SearchClient({ runs, topRated }) {
                     return (
                       <Link
                         key={d}
-                        href={`/browse/decade?decade=${decade}`}
+                        href={`/browse/decade?decade=${decade}${pubParam}`}
                         className="search-pill"
                       >
                         {d}
@@ -169,7 +167,7 @@ export default function SearchClient({ runs, topRated }) {
          return (
          <Link
           key={l.label}
-          href={`/browse/length?len=${l.key}`}
+          href={`/browse/length?len=${l.key}${pubParam}`}
           className="search-pill"
           >
           {l.label}

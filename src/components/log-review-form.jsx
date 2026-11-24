@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 export default function LogReviewForm({ runId, issueCount, existingLog, userReviews }) {
   const router = useRouter();
 
-  const [status, setStatus] = useState(existingLog?.status ?? "");
   const [issuesRead, setIssuesRead] = useState(existingLog?.issues_read ?? "");
   const [score, setScore] = useState(existingLog?.score ?? "");
   const [reviewText, setReviewText] = useState("");
@@ -16,104 +15,105 @@ export default function LogReviewForm({ runId, issueCount, existingLog, userRevi
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
+  // Status is worked out from progress
+  const readCount = issuesRead === "" ? null : Number(issuesRead);
+  const isComplete = issueCount && readCount !== null && readCount >= issueCount;
+  const derivedStatus = isComplete ? "Complete" : "Reading";
+
   function getPct() {
-    if (!issueCount || !issuesRead) return null;
-    const pct = Math.round((Number(issuesRead) / issueCount) * 100);
-    if (pct >= 100) return "Complete";
-    return `${pct}%`;
+    if (!issueCount || readCount === null) return null;
+    const pct = Math.round((readCount / issueCount) * 100);
+    return pct >= 100 ? "Complete" : `${pct}%`;
   }
 
   async function handleSave() {
-  if (!status) { setError("Please select a status."); return; }
-  setSaving(true);
-  setError(null);
+    if (issuesRead === "") {
+      setError("Enter how many issues you've read.");
+      return;
+    }
+    setSaving(true);
+    setError(null);
 
-  // Save the log with status, progress, and score
-  const logRes = await fetch("/api/log-review", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      run_id: runId,
-      status,
-      issues_read: issuesRead === "" ? null : Number(issuesRead),
-      score: score === "" ? null : Number(score),
-    }),
-  });
+    // Never store more than the run actually has
+    const finalRead = issueCount ? Math.min(readCount, issueCount) : readCount;
 
-  if (!logRes.ok) {
-    setError("Something went wrong saving your log.");
-    setSaving(false);
-    return;
-  }
-
-  // Only create a review entry if they wrote something
-  if (reviewText.trim()) {
-    const reviewRes = await fetch("/api/reviews/create", {
+    const logRes = await fetch("/api/log-review", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         run_id: runId,
-        review_text: reviewText.trim(),
-        contains_spoilers: spoilers,
-        review_type: reviewType,
-        issue_start: reviewType === "issue" && issueStart ? Number(issueStart) : null,
-        issue_end: reviewType === "issue" && issueEnd ? Number(issueEnd) : null,
-        score: score === "" ? null : Number(score),    
+        status: derivedStatus,
+        issues_read: finalRead,
+        score: score === "" ? null : Number(score),
       }),
     });
 
-    if (!reviewRes.ok) {
-      setError("Log saved but review failed to post.");
+    if (!logRes.ok) {
+      setError("Something went wrong saving your log.");
       setSaving(false);
       return;
     }
-  }
 
-  router.push(`/runs/${runId}`);
-}
+    if (reviewText.trim()) {
+      const reviewRes = await fetch("/api/reviews/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          run_id: runId,
+          review_text: reviewText.trim(),
+          contains_spoilers: spoilers,
+          review_type: reviewType,
+          issue_start: reviewType === "issue" && issueStart ? Number(issueStart) : null,
+          issue_end: reviewType === "issue" && issueEnd ? Number(issueEnd) : null,
+          score: score === "" ? null : Number(score),
+        }),
+      });
+
+      if (!reviewRes.ok) {
+        setError("Log saved but review failed to post.");
+        setSaving(false);
+        return;
+      }
+    }
+
+    router.push(`/runs/${runId}`);
+  }
 
   return (
     <div className="log-form">
 
-      {/* Status */}
-      <div className="log-field">
-        <div className="log-label">Status</div>
-        <div className="log-status-row">
-          {["Reading", "Complete"].map((s) => (
-            <button
-              key={s}
-              className={`log-status-btn ${status === s ? "on" : ""}`}
-              onClick={() => {
-                setStatus(s);
-                if (s === "Complete" && issueCount) setIssuesRead(issueCount);
-              }}
-              type="button"
-            >
-              {s}
-            </button>
-          ))}
-        </div>
-      </div>
-
       {/* Progress */}
-      {status !== "" && (
-        <div className="log-field">
-          <div className="log-label">Progress <span className="log-optional">optional</span></div>
-          <div className="log-progress-row">
-            <input
-              type="number"
-              min="0"
-              max={issueCount ?? undefined}
-              value={issuesRead}
-              onChange={(e) => setIssuesRead(e.target.value)}
-              className="log-issues-input"
-              placeholder="0"
-            />
-            {issueCount && <span className="log-issues-of">of {issueCount} issues</span>}
-            {getPct() && <span className="log-pct-pill">{getPct()}</span>}
-          </div>
+      <div className="log-field">
+        <div className="log-label">Progress</div>
+        <div className="log-progress-row">
+          <input
+            type="number"
+            min="0"
+            max={issueCount ?? undefined}
+            value={issuesRead}
+            onChange={(e) => setIssuesRead(e.target.value)}
+            className="log-issues-input"
+            placeholder="0"
+          />
+          {issueCount && <span className="log-issues-of">of {issueCount} issues</span>}
+          {issueCount && (
+            <button
+              type="button"
+              className="log-btn-cancel"
+              onClick={() => setIssuesRead(issueCount)}
+              style={{ fontSize: 11, padding: "4px 10px" }}
+            >
+              Read all
+            </button>
+          )}
+          {getPct() && <span className="log-pct-pill">{getPct()}</span>}
         </div>
-      )}
+        {issuesRead !== "" && (
+          <div style={{ fontSize: 11, color: "rgba(245,242,235,0.3)", marginTop: 4 }}>
+            Will be logged as {derivedStatus}
+          </div>
+        )}
+      </div>
 
       {/* Score */}
       <div className="log-field">
@@ -156,30 +156,30 @@ export default function LogReviewForm({ runId, issueCount, existingLog, userRevi
           </button>
         </div>
         {reviewType === "issue" && (
-     <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
-       <input
-         type="number"
-         min="1"
-         max={issueCount ?? undefined}
-         value={issueStart}
-         onChange={(e) => setIssueStart(e.target.value)}
-         className="log-issues-input"
-         placeholder="From #"
-         style={{ width: 80 }}
-    />
-    <span style={{ color: "rgba(245,242,235,0.4)", fontSize: 13 }}>–</span>
-    <input
-      type="number"
-      min="1"
-      max={issueCount ?? undefined}
-      value={issueEnd}
-      onChange={(e) => setIssueEnd(e.target.value)}
-      className="log-issues-input"
-      placeholder="To #"
-      style={{ width: 80 }}
-    />
-  </div>
-)}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
+            <input
+              type="number"
+              min="1"
+              max={issueCount ?? undefined}
+              value={issueStart}
+              onChange={(e) => setIssueStart(e.target.value)}
+              className="log-issues-input"
+              placeholder="From #"
+              style={{ width: 80 }}
+            />
+            <span style={{ color: "rgba(245,242,235,0.4)", fontSize: 13 }}>–</span>
+            <input
+              type="number"
+              min="1"
+              max={issueCount ?? undefined}
+              value={issueEnd}
+              onChange={(e) => setIssueEnd(e.target.value)}
+              className="log-issues-input"
+              placeholder="To #"
+              style={{ width: 80 }}
+            />
+          </div>
+        )}
       </div>
 
       {/* Review */}

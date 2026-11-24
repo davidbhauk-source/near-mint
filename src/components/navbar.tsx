@@ -42,7 +42,6 @@ export default function Navbar() {
       </nav>
 
       <div className="nav-right">
-        <Link href="/search" className="btn-log">+ Log run</Link>
         {user && (
           <Link href="/friends" className={`nav-link ${pathname.startsWith('/friends') ? 'active' : ''}`}>
           Friends

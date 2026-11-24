@@ -7,27 +7,34 @@ export async function POST(req) {
 
   const { run_id, bookmarked } = await req.json();
 
-  // Check if log row exists
   const { data: existing } = await supabase
     .from("readlogs")
-    .select("id")
+    .select("id, status")
     .eq("run_id", run_id)
     .eq("user_id", user.id)
-    .single();
+    .maybeSingle();
 
-  if (existing) {
-    // Update existing row
-    await supabase
-      .from("readlogs")
-      .update({ bookmarked })
-      .eq("run_id", run_id)
-      .eq("user_id", user.id);
-  } else {
-    // Insert new row with just bookmark — no status required
-    await supabase
-      .from("readlogs")
-      .insert({ run_id, user_id: user.id, bookmarked });
+  const isRealLog = existing && ["Reading", "Complete"].includes(existing.status);
+  let error = null;
+
+  if (bookmarked) {
+    if (existing) {
+      ({ error } = await supabase.from("readlogs").update({ bookmarked: true }).eq("id", existing.id));
+    } else {
+      ({ error } = await supabase.from("readlogs").insert({
+        run_id, user_id: user.id, bookmarked: true, status: null,
+      }));
+    }
+  } else if (existing) {
+    if (isRealLog) {
+      // They've actually logged it, so keep the log and just clear the bookmark
+      ({ error } = await supabase.from("readlogs").update({ bookmarked: false }).eq("id", existing.id));
+    } else {
+      // Bookmark-only row, so remove it entirely
+      ({ error } = await supabase.from("readlogs").delete().eq("id", existing.id));
+    }
   }
 
+  if (error) return Response.json({ error: error.message }, { status: 500 });
   return Response.json({ ok: true });
 }

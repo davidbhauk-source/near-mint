@@ -3,6 +3,13 @@ import { useState, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
+function issueLabel(r) {
+  if (r.review_type !== "issue" || (!r.issue_start && !r.issue_end)) return null;
+  const start = r.issue_start ?? r.issue_end;
+  const end = r.issue_end ?? r.issue_start;
+  return start === end ? `Issue #${start}` : `Issues #${start}–${end}`;
+}
+
 export default function ReviewsClient({ reviews, currentUserId }) {
   const [sort, setSort] = useState("likes");
   const [filterOpen, setFilterOpen] = useState(false);
@@ -182,14 +189,22 @@ export default function ReviewsClient({ reviews, currentUserId }) {
                     <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12 }}>
                       {review.profiles?.username && (
                         <span style={{ color: "rgba(245,242,235,0.4)" }}>
-                          {review.profiles.display_name || review.profiles.username}
+                         {review.profiles.username}
                         </span>
                       )}
                       {review.reviewer_score !== null && (
                         <span style={{ color: "#97c459" }}>{review.reviewer_score}/100</span>
                       )}
-                      {review.review_type === "issue" && review.issue_number && (
-                        <span style={{ color: "rgba(245,242,235,0.3)" }}>Issue #{review.issue_number}</span>
+                      {issueLabel(review) && (
+                       <span style={{
+                          background: "rgba(151,196,89,0.12)",
+                          color: "#97c459",
+                          padding: "1px 7px",
+                          borderRadius: 4,
+                          fontSize: 11,
+                        }}>
+                          {issueLabel(review)}
+                        </span>
                       )}
                     </div>
                   </div>

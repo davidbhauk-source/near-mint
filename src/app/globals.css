@@ -60,15 +60,6 @@ body {
 
 .nav-right { display: flex; align-items: center; gap: 8px; }
 
-.btn-log {
-  font-size: 15px;
-  font-weight: 500;
-  background: var(--nm-accent);
-  color: var(--nm-ink);
-  padding: 6px 14px;
-  border-radius: 6px;
-  text-decoration: none;
-}
 
 .avatar {
   width: 30px;
@@ -1556,11 +1547,6 @@ body {
     font-size: 15px;
   }
 
-  .btn-log {
-    padding: 6px 10px;
-    font-size: 11px;
-  }
-
   /* Page body padding */
   .nm-page-body {
     padding: 20px 14px;
@@ -2202,4 +2188,72 @@ body {
 
 .site-footer a {
   color: rgba(245, 242, 235, 0.5);
+}
+
+/* Navbar fixes */
+.wordmark {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.nav-link {
+  white-space: nowrap;
+}
+
+.avatar {
+  flex-shrink: 0;
+  min-width: 30px;
+  min-height: 30px;
+  aspect-ratio: 1;
+}
+
+@media (max-width: 768px) {
+  .navbar {
+    height: auto;
+    flex-wrap: wrap;
+    padding: 8px 14px;
+    row-gap: 4px;
+  }
+
+  .wordmark {
+    order: 1;
+    margin-right: 0;
+  }
+
+  .nav-right {
+    order: 2;
+    margin-left: auto;
+  }
+
+  .nav-links {
+    order: 3;
+    flex: 1 1 100%;
+    gap: 4px;
+    overflow-x: auto;
+  }
+
+  .nav-link {
+    padding: 6px 10px;
+    font-size: 13px;
+  }
+}
+
+.recent-card { position: relative; }
+
+.recent-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: rgba(17, 28, 17, 0.9);
+  color: var(--nm-accent);
+  font-size: 8px;
+  padding: 2px 4px;
+  border-radius: 3px;
+}
+
+.recent-status,
+.log-status {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }

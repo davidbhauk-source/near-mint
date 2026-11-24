@@ -43,6 +43,7 @@ export default async function ProfilePage() {
     .from("readlogs")
     .select("*, runs(*)")
     .eq("user_id", userId)
+    .in("status", ["Reading", "Complete"]) 
     .order("created_at", { ascending: false });
 
   const { data: reviews } = await supabase

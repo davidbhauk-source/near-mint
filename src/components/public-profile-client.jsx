@@ -112,19 +112,27 @@ export default function PublicProfileClient({
             <span className="recent-label">Recently logged</span>
           </div>
           <div className="recent-strip">
-            {recentLogs.map((log) => (
-              <Link key={log.id} href={`/runs/${log.run_id}`} className="recent-card">
-                {log.runs?.cover_url ? (
-                  <img src={log.runs.cover_url} alt={log.runs.title} className="recent-cover" style={{ objectFit: "cover" }} />
-                ) : (
-                  <div className="recent-cover" style={{ background: "#1a2e1a" }} />
-                )}
-                <div className="recent-meta">
-                  <div className="recent-title">{log.runs?.title}</div>
-                  <div className="recent-status">{log.status}</div>
-                </div>
-              </Link>
-            ))}
+            {recentLogs.map((log) => {
+             const pct = log.runs?.issue_count && log.issues_read
+               ? Math.round((log.issues_read / log.runs.issue_count) * 100)
+               : null;
+             return (
+               <Link key={log.id} href={`/runs/${log.run_id}`} className="recent-card">
+                 {log.runs?.cover_url ? (
+                   <img src={log.runs.cover_url} alt={log.runs.title} className="recent-cover" style={{ objectFit: "cover" }} />
+                 ) : (
+                   <div className="recent-cover" style={{ background: "#1a2e1a" }} />
+                 )}
+                 {pct !== null && (
+                   <span className="recent-badge">{pct >= 100 ? "✓" : `${pct}%`}</span>
+                 )}
+                 <div className="recent-meta">
+                   <div className="recent-title">{log.runs?.title}</div>
+                   <div className="recent-status">{log.runs?.creative_team?.writers?.join(", ") ?? ""}</div>
+                 </div>
+               </Link>
+             );
+           })}
           </div>
         </div>
       )}
@@ -165,7 +173,7 @@ export default function PublicProfileClient({
                     )}
                     <div className="log-meta">
                       <div className="log-title">{log.runs?.title}</div>
-                      <div className="log-status">{log.status}</div>
+                      <div className="log-status">{log.runs?.creative_team?.writers?.join(", ") ?? ""}</div>
                     </div>
                   </Link>
                 );

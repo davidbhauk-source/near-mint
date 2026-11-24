@@ -86,7 +86,7 @@ export default async function ReviewPage({ params }) {
             href={`/profile/${reviewerProfile?.username}`}
             style={{ fontSize: 14, fontWeight: 500, color: "#f5f2eb", textDecoration: "none" }}
           >
-            {reviewerProfile?.display_name || reviewerProfile?.username}
+            {reviewerProfile?.username || reviewerProfile?.username}
           </Link>
           {reviewerScore !== null && reviewerScore !== undefined && (
             <span style={{ marginLeft: 8, fontSize: 13, color: "#97c459" }}>{reviewerScore}/100</span>

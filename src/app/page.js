@@ -46,6 +46,7 @@ export default async function HomePage() {
   const { data: recentLogs } = await supabase
     .from("readlogs")
     .select("run_id")
+    .in("status", ["Reading", "Complete"])
     .gte("created_at", oneWeekAgo.toISOString());
 
   const logCounts = {};
@@ -55,7 +56,8 @@ export default async function HomePage() {
 
   const { data: allLogs } = await supabase
     .from("readlogs")
-    .select("run_id");
+    .select("run_id")
+    .in("status", ["Reading", "Complete"]);
 
   const allTimeLogCounts = {};
   (allLogs ?? []).forEach(({ run_id }) => {
@@ -79,6 +81,7 @@ if (user) {
       .from("readlogs")
       .select("run_id, user_id, created_at, runs(*)")
       .in("user_id", followingIds)
+      .in("status", ["Reading", "Complete"])
       .order("created_at", { ascending: false })
       .limit(100);
 

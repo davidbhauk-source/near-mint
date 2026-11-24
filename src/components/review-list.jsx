@@ -2,6 +2,13 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 
+function issueLabel(r) {
+  if (r.review_type !== "issue" || (!r.issue_start && !r.issue_end)) return null;
+  const start = r.issue_start ?? r.issue_end;
+  const end = r.issue_end ?? r.issue_start;
+  return start === end ? `Issue #${start}` : `Issues #${start}–${end}`;
+}
+
 export default function ReviewList({ reviews, currentUserId, runId }) {
   const [sort, setSort] = useState("likes");
   const [filterOpen, setFilterOpen] = useState(false);
@@ -184,21 +191,27 @@ export default function ReviewList({ reviews, currentUserId, runId }) {
               <Link href={`/reviews/${review.id}`} style={{ textDecoration: "none" }}>
                 <div className="rd-review-card" style={{ cursor: "pointer" }}>
                   <div className="rd-review-top">
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      {review.profiles?.username && (
-                        <span style={{ fontSize: 12, color: "rgba(245,242,235,0.5)" }}>
-                          {review.profiles.display_name || review.profiles.username}
-                        </span>
-                      )}
-                      {review.reviewer_score !== null && review.reviewer_score !== undefined && (
-                        <span style={{ fontSize: 12, color: "#97c459" }}>{review.reviewer_score}/100</span>
-                      )}
-                      {review.review_type === "issue" && (review.issue_start || review.issue_end) && (
-                        <span style={{ fontSize: 11, color: "rgba(245,242,235,0.3)" }}>
-                          Issues #{review.issue_start}{review.issue_end && review.issue_end !== review.issue_start ? `–${review.issue_end}` : ""}
-                        </span>
-                      )}
-                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                    {review.profiles?.username && (
+                      <span style={{ fontSize: 12, color: "rgba(245,242,235,0.5)" }}>
+                        {review.profiles.username}
+                      </span>
+                    )}
+                    {review.reviewer_score !== null && review.reviewer_score !== undefined && (
+                      <span style={{ fontSize: 12, color: "#97c459" }}>{review.reviewer_score}/100</span>
+                    )}
+                    {issueLabel(review) && (
+                      <span style={{
+                        fontSize: 11,
+                        background: "rgba(151,196,89,0.12)",
+                        color: "#97c459",
+                        padding: "2px 7px",
+                        borderRadius: 4,
+                      }}>
+                        {issueLabel(review)}
+                      </span>
+                    )}
+                  </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       {likeStates[review.id]?.count > 0 && (
                         <span style={{ fontSize: 11, color: "rgba(245,242,235,0.3)" }}>
